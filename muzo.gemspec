@@ -13,7 +13,7 @@ Gem::Specification.new do |spec|
   spec.homepage = "https://github.com/Barzarian/Muzo"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
-  spec.metadata["allowed_push_host"] = "https://rubygems.org"
+  spec.metadata["rubygems_mfa_required"] = "true"
 
   # Uncomment the line below to require MFA for gem pushes.
   # This helps protect your gem from supply chain attacks by ensuring

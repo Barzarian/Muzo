@@ -80,22 +80,40 @@ module Muzo
       uri = URI.parse(url)
       uri.query = URI.encode_www_form(params) unless params.empty?
 
-      request = Net::HTTP::Get.new(uri)
-      request["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-      request["Accept"] = "application/json, text/plain, */*"
-      request["Referer"] = "https://www.espn.com/"
+      response = send_request(uri)
+      ensure_success(response, uri)
+      parse_response(response)
+    end
 
-      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https") do |http|
+    def send_request(uri)
+      request = build_http_request(uri)
+      Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https") do |http|
         http.request(request)
       end
+    end
 
-      unless response.is_a?(Net::HTTPSuccess)
-        raise Muzo::RequestError.new(
-          "ESPN API returned #{response.code} for #{uri}",
-          response.code.to_i
-        )
-      end
+    def build_http_request(uri)
+      request = Net::HTTP::Get.new(uri)
+      request["User-Agent"] = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "AppleWebKit/537.36 (KHTML, like Gecko)",
+        "Chrome/126.0.0.0 Safari/537.36"
+      ].join(" ")
+      request["Accept"] = "application/json, text/plain, */*"
+      request["Referer"] = "https://www.espn.com/"
+      request
+    end
 
+    def ensure_success(response, uri)
+      return if response.is_a?(Net::HTTPSuccess)
+
+      raise Muzo::RequestError.new(
+        "ESPN API returned #{response.code} for #{uri}",
+        response.code.to_i
+      )
+    end
+
+    def parse_response(response)
       JSON.parse(response.body)
     rescue JSON::ParserError => e
       raise Muzo::ParseError, "Couldn't parse ESPN's response: #{e.message}"
