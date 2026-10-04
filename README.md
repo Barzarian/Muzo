@@ -1,38 +1,132 @@
-# Muzo
+## Muzo
 
-TODO: Delete this and the text below, and describe your gem
+A small Ruby gem for pulling data from ESPN's public API - scores, news,
+teams, and standings.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/muzo`. To experiment with that code, run `bin/console` for an interactive prompt.
+Heads up: this isn't an *official* ESPN API. It's the same one that
+powers espn.com, and ESPN doesn't publish docs for it, so endpoints
+could change or go away without warning. Use accordingly.
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+Add this to your Gemfile:
 
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+gem "muzo"
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+Then run:
 
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```
+bundle install
+```
+
+Or install it by itself:
+
+```
+gem install muzo
 ```
 
 ## Usage
 
-TODO: Write usage instructions here
+First, make a client for the sport/league you care about:
 
-## Development
+```ruby
+require "muzo"
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+client = muzo::Client.new(sport: "football", league: "nfl")
+```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+Some other sport/league combos that work:
 
-## Contributing
+| sport        | league  | what it is          |
+|--------------|---------|----------------------|
+| football     | nfl     | NFL                  |
+| basketball   | nba     | NBA                  |
+| baseball     | mlb     | MLB                  |
+| hockey       | nhl     | NHL                  |
+| football     | college-football | NCAA football |
+| basketball   | mens-college-basketball | NCAA men's basketball |
+| soccer       | eng.1   | English Premier League |
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/muzo. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/muzo/blob/master/CODE_OF_CONDUCT.md).
+### Scoreboard
+
+```ruby
+client.scoreboard
+# => games happening today (or the current "slate")
+
+client.scoreboard(date: "20240115")
+# => games on a specific day (YYYYMMDD)
+```
+
+### News
+
+```ruby
+client.news
+client.news(limit: 5)
+```
+
+### Teams
+
+```ruby
+client.teams
+# => every team in the league
+
+client.team("dal")
+# => just the Cowboys (works with abbreviation or ESPN's numeric id)
+```
+
+### Standings
+
+```ruby
+client.standings
+```
+
+### Game summary (box score, play-by-play, etc)
+
+```ruby
+scoreboard = client.scoreboard
+event_id = scoreboard["events"].first["id"]
+
+client.summary(event_id)
+```
+
+## Error handling
+
+Every request can raise one of:
+
+- `muzo::RequestError` - ESPN responded with a non-2xx status.
+  Has a `status_code` you can check.
+- `muzo::ParseError` - the response body wasn't valid JSON.
+
+Both are subclasses of `muzo::Error`, so you can just rescue that
+if you don't care about the difference:
+
+```ruby
+begin
+  client.scoreboard
+rescue muzo::Error => e
+  puts "Something went wrong: #{e.message}"
+end
+```
+
+## Running the tests
+
+```
+bundle install
+rake test
+```
+
+(The tests hit the real ESPN API, so you'll need an internet
+connection for them to pass.)
+
+## Known limitations
+
+- No authentication support - as far as I know these endpoints don't
+  need it, but that also means no access to anything private.
+- No retry/backoff logic if ESPN rate-limits you.
+- Response shapes aren't wrapped in nice Ruby objects yet, you just
+  get back the raw parsed JSON as a Hash. Might add that later.
 
 ## License
 
@@ -40,4 +134,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the Muzo project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/muzo/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the Muzo project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/Barzarian/muzo/blob/master/CODE_OF_CONDUCT.md).
